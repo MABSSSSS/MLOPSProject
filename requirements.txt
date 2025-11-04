@@ -1,6 +1,9 @@
 pandas
 numpy
 seaborn
-
+matplotlib
 setuptools
+scikit-learn
+# catboost
+# xgboost
 -e .
