@@ -4,6 +4,7 @@ seaborn
 matplotlib
 setuptools
 scikit-learn
+dill
 # catboost
 # xgboost
 -e .
