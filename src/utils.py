@@ -1,10 +1,10 @@
 import os 
 import sys 
-
+import optuna 
 import numpy as np 
 import pandas as pd 
 import dill
-
+from src.logger import logging 
 from src.exception import CustomException 
 from sklearn.metrics import r2_score 
 
@@ -21,27 +21,68 @@ def save_object(file_path, obj):
         raise CustomException(e,sys)
     
 
-def evaluate_model(X_train,y_train,X_test,y_test, models):
+def evaluate_model(X_train,y_train,X_test,y_test, models,param,n_trials=30):
     try:
        
         report = {}
+        print("Shapes:")
+        print("X_train:", X_train.shape)
+        print("y_train:", np.array(y_train).shape)
+        print("X_test:", X_test.shape)
+        print("y_test:", np.array(y_test).shape)
+
         
-        for i in range(len(list(models))):
-            model = list(models.values())[i]
+        for model_name, model in models.items():
+            logging.info(f"Starting Optuna tuning for: {model_name}")
+            print(f"\n Tuning {model_name}...")
             
-            model.fit(X_train, y_train)
+            # If models has no parameters then tain directly 
             
-            y_train_pred = model.predict(X_train)
+            if model_name not in param or len(param[model_name]) == 0:
+                model.fit(X_train,y_train)
+                y_pred = model.predict(X_test)
+                score = r2_score(y_test,y_pred)
+                report[model_name] = score 
+                print(f" { model_name}: No params, R2 = {score:.4f}")
+                continue 
             
-            y_test_pred = model.predict(X_test)
+            search_space = param[model_name]
             
-            train_model_score = r2_score(y_train, y_train_pred)
+            # Define objective for Optuna 
             
-            test_model_score = r2_score(y_test, y_test_pred)
+            def objective(trial):
+                trial_params = {}
+                
+                for key,values in search_space.items():
+                    if isinstance(values[0], float):
+                        trial_params[key] = trial.suggest_float(key, min(values), max(values))
+                    elif isinstance(values[0],int):
+                        trial_params[key] = trial.suggest_int(key, min(values),max(values))
+                    else:
+                        trial_params[key] = trial.suggest_categorical(key,values)
+                
+                
+                model.set_params(**trial_params)
+                model.fit(X_train,y_train)
+                preds = model.predict(X_test)
+                return r2_score(y_test,preds)
             
-            report[list(models.keys())[i]] = test_model_score 
+            study = optuna.create_study(direction="maximize")
+            study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
             
-        return report
+            best_params = study.best_params 
+            best_score = study.best_value 
+            
+            
+            logging.info(f"Best params for {model_name}: {best_params}")
+            logging.info(f"Best R2 Score: {best_score:.4f}")
+            
+            print(f"Best params for {model_name}: {best_params}")
+            print(f"Best R score: {best_score: .4f}")
+            
+            report[model_name] = best_score 
+        
+        return report  
     
     except  Exception as e:
         raise CustomException(e,sys)

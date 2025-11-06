@@ -39,7 +39,8 @@ class DataTransformation:
                 'BsmtQual',
                 'Foundation',
                 'ExterQual',
-                'HouseStyle']
+                'HouseStyle'
+                ]
             
             num_pipeline = Pipeline(
                 steps=[
@@ -53,7 +54,7 @@ class DataTransformation:
                 
                 steps=[
                     ("imputer",SimpleImputer(strategy="most_frequent")),
-                    ("one_hot_encoder",OneHotEncoder()),
+                    ("one_hot_encoder",OneHotEncoder(handle_unknown='ignore',drop='first',sparse_output=False)),
                     ("scaler", StandardScaler(with_mean=False))
                 ]
                 
@@ -94,9 +95,7 @@ class DataTransformation:
             preprocessor_obj  = self.get_transformer_object()
             
             target_column_name = "SalePrice"
-            
-            numerical_columns = ['OverallQual', 'GarageCars', 'YearBuilt','TotalBsmtSF','FullBath','1stFlrSF']
-
+                        
             input_feature_train_df = train_df.drop(columns=[target_column_name],axis=1)
             target_feature_train_df = train_df[target_column_name]
             print(f"Input feature train df:\n {input_feature_train_df.head()}")
@@ -112,23 +111,28 @@ class DataTransformation:
             input_feature_train_arr = preprocessor_obj.fit_transform(input_feature_train_df)
             input_feature_test_arr = preprocessor_obj.transform(input_feature_test_df)
             
+            print(input_feature_train_arr.shape)
+            print(input_feature_test_arr.shape)
+            print(np.array(target_feature_test_df).shape)
+            print(np.array(target_feature_train_df).shape)
+            
             train_arr = np.c_[input_feature_train_arr,np.array(target_feature_train_df)]
             
             
             test_arr = np.c_[input_feature_test_arr, np.array(target_feature_test_df)]
             
-            
+            print("concatination done")
             logging.info(f"Saved preprocessing object.")
             
             save_object(
                 file_path=self.data_transformation_config.preprocessor_obj_file_path,
                 obj=preprocessor_obj 
             )
-            
+            print("save done")
             return (
                 train_arr,
                 test_arr,
-                self.data_transformation_config.preprocessor_obj_file_path,
+                self.data_transformation_config.preprocessor_obj_file_path
             )
             
         
