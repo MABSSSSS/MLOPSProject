@@ -145,6 +145,8 @@ ENV/
 env.bak/
 venv.bak/
 
+# Ignore all raw data
+notebook/data/
 # Spyder project settings
 .spyderproject
 .spyproject
