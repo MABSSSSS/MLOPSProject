@@ -21,7 +21,7 @@ def save_object(file_path, obj):
         raise CustomException(e,sys)
     
 
-def evaluate_model(X_train,y_train,X_test,y_test, models,param,n_trials=30):
+def evaluate_model(X_train,y_train,X_test,y_test, models,best_params,n_trials=30):
     try:
        
         report = {}
@@ -38,7 +38,7 @@ def evaluate_model(X_train,y_train,X_test,y_test, models,param,n_trials=30):
             
             # If models has no parameters then tain directly 
             
-            if model_name not in param or len(param[model_name]) == 0:
+            if model_name not in best_params or len(best_params[model_name]) == 0:
                 model.fit(X_train,y_train)
                 y_pred = model.predict(X_test)
                 score = r2_score(y_test,y_pred)
@@ -46,7 +46,7 @@ def evaluate_model(X_train,y_train,X_test,y_test, models,param,n_trials=30):
                 print(f" { model_name}: No params, R2 = {score:.4f}")
                 continue 
             
-            search_space = param[model_name]
+            search_space = best_params[model_name]
             
             # Define objective for Optuna 
             

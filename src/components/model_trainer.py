@@ -3,9 +3,11 @@ import sys
 from dataclasses import dataclass 
 import dill 
 import optuna 
-
-
+import numpy as np 
+import mlflow 
+import mlflow.sklearn 
 from catboost import CatBoostRegressor 
+from urllib.parse import urlparse
 
 from sklearn.ensemble import (
     
@@ -15,7 +17,7 @@ from sklearn.ensemble import (
 )
 
 from sklearn.linear_model import LinearRegression 
-from sklearn.metrics import r2_score 
+from sklearn.metrics import r2_score , mean_squared_error,mean_absolute_error 
 from sklearn.neighbors import KNeighborsRegressor 
 from sklearn.tree import DecisionTreeRegressor 
 from xgboost import XGBRegressor 
@@ -24,6 +26,10 @@ from src.exception import CustomException
 from src.logger import logging 
 
 from src.utils import save_object ,evaluate_model 
+# import dagshub 
+
+# dagshub.init(repo_owner='happinesswhat31', repo_name='MLOPSProject', mlflow=True)
+# print("Tracking URI:", mlflow.get_tracking_uri())
 
 @dataclass 
 class ModelTrainerConfig:
@@ -35,6 +41,12 @@ class ModelTrainerConfig:
 class ModelTrainer:
     def __init__(self):
         self.model_trainer_config=ModelTrainerConfig()
+    
+    def eval_metrics(self,actual,pred):
+        rmse = np.sqrt(mean_squared_error(actual,pred))
+        mae = mean_absolute_error(actual,pred)
+        r2 = r2_score(actual,pred)
+        return rmse, mae, r2 
         
     def run_catboost_optuna(self,X_train,y_train,X_test,y_test,n_trials=25):
         """
@@ -61,6 +73,7 @@ class ModelTrainer:
         
         return study.best_params, study.best_value 
     
+    
         
         
     def initiate_model_trainer(self,train_array,test_array):
@@ -74,6 +87,17 @@ class ModelTrainer:
                 test_array[:,-1]
                 
             )
+            # cleaning data:removing NAN Values in target
+            train_nan_mask = ~np.isnan(y_train)
+            test_nan_mask = ~np.isnan(y_test)
+            
+            X_train = X_train[train_nan_mask]
+            y_train = y_train[train_nan_mask]
+            X_test = X_test[test_nan_mask]
+            y_test = y_test[test_nan_mask]
+            print(f"Cleaned NaNs - Remaining samples:Train ={len(y_train)}, Test={len(y_test)}")
+            
+            
             print(X_train)
             models = {
                 "Random Forest": RandomForestRegressor(),
@@ -86,7 +110,7 @@ class ModelTrainer:
                 "AdaBoost Classifier": AdaBoostRegressor(),
             }
             
-            params = {
+            best_params = {
                 "Decision Tree": {
                     'criterion':['squared_error','friedman_mse','absolute_error', 'poisson'],
                     # 'splitter':['best','random'],
@@ -124,52 +148,77 @@ class ModelTrainer:
             
             
             model_report:dict =evaluate_model(X_train=X_train,y_train=y_train,X_test=X_test,y_test=y_test,
-                                              models=models,param=params,n_trials=20)
+                                              models=models,best_params=best_params,n_trials=20)
             
-            logging.info(f"Model report: {model_report}")
-            # choose best model by highest score 
+        #    To get best model score from dict 
+            best_model_score = max(sorted(model_report.values()))
             
-            best_model_name = max(model_report, key=model_report.get)
-            best_model_score = model_report[best_model_name]
-            logging.info(f"Best model name:{best_model_name} with score {best_model_score:.4f}")
+            # To get best model name from dict
+            
+            best_model_name = list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+            best_model = models[best_model_name]
+            
+            print("This is best model")
+            print(best_model_name)
+            
+            model_names = list(best_params.keys())
+            
+            actual_model = "" 
+            
+            for model in model_names:
+                if best_model_name == model:
+                    actual_model = actual_model + model 
+                    
+            best_params = best_params[actual_model]
+            
+            mlflow.set_registry_uri("https://dagshub.com/happinesswhat31/MLOPSProject.mlflow")
+            tracking_url_type_score = urlparse(mlflow.get_tracking_uri()).scheme 
+                #  password  9@SNfYYzZPezthw 
+            # best model params
+            
+            with mlflow.start_run():
+                
+                predicted_qualities = best_model.predict(X_test)
+                rmse,mae,r2 = self.eval_metrics(y_test, predicted_qualities)
+                
+                # Log params and metrics to ML Flow 
+                
+                mlflow.log_params(best_params)
+                mlflow.log_metric("RMSE", rmse)
+                mlflow.log_metric("MAE",mae)
+                mlflow.log_metric("R2",r2)
+                
+                if tracking_url_type_score != "file":
+                    mlflow.sklearn.log_model(
+                        best_model, artifact_path="model", registered_model_name =  None 
+                        
+                    )
+                    
+                else:
+                    mlflow.sklearn.log_model(best_model,"model")
+                    
+            
+            if best_model_score<0.6:
+                raise CustomException("No best model found")
+            logging.info(f"Best found model")
             
             
-            if best_model_name == "Catboosting Classifer":
-                logging.info("CatBoost selected as best model -")
-                best_params, best_score = self.run_catboost_optuna(X_train,y_train,X_test,y_test, n_trials=50)
-                
-                final_model = CatBoostRegressor(verbose=False, **best_params)
-                final_model.fit(X_train,y_train)
-                
-                # saving final model 
-                
-                save_object(file_path = self.model_trainer_config.trained_model_file_path, obj=final_model)
-                logging.info(f"Sved final catboost model to {self.model_trainer_config.trained_model_file_path}")
-                
-                # return metrics 
-                preds = final_model.predict(X_test)
-                final_r2 = r2_score(y_test,preds)
-                
-                return {
-                    "best_model_name": "CatBoost",
-                    "best_params":best_params,
-                    "r2_score":float(final_r2)
-                }
+            save_object(
+                file_path=self.model_trainer_config.trained_model_file_path,
+                obj = best_model
+            )
             
-            else:
-                logging.info(f"{best_model_name} selected as best model - saving without Optuna tuning.")
-                best_model = models[best_model_name]
-                best_model.fit(X_train, y_train)
-                save_object(file_path=self.model_trainer_config.trained_model_file_path, obj=best_model)
-
-                preds = best_model.predict(X_test)
-                final_r2 = r2_score(y_test, preds)
-
-                return {
-                    "best_model_name": best_model_name,
-                    "best_params": "Default/GridSearch",
-                    "r2_score": float(final_r2)
-                }
+            predicted = best_model.predict(X_test)
+            
+            r2_square = r2_score(y_test, predicted)
+            return r2_square 
+        
+            
+            
+            
+                
             
         except Exception as e:
             raise CustomException(e,sys)
@@ -177,6 +226,7 @@ class ModelTrainer:
 if __name__ == "__main__":
             # usage for local development only
             from src.components.data_ingestion import DataIngestion 
+            
             di = DataIngestion()
             train_path, test_path = di.initiate_data_ingestion()
             

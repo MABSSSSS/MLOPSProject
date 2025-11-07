@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/MLOPS/mlruns/0/7f92765683f8402ea8531536aa49cc26/artifacts
+end_time: 1762517174352
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 7f92765683f8402ea8531536aa49cc26
+run_name: defiant-crow-89
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762517170461
+status: 3
+tags: []
+user_id: theni

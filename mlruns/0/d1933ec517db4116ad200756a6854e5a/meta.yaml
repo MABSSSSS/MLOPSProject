@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/MLOPS/mlruns/0/d1933ec517db4116ad200756a6854e5a/artifacts
+end_time: 1762517251419
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: d1933ec517db4116ad200756a6854e5a
+run_name: omniscient-fox-454
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762517247459
+status: 3
+tags: []
+user_id: theni

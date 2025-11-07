@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/MLOPS/mlruns/0/32fbb8f4cbea414ca37f6d73aaac6277/artifacts
+end_time: 1762515687585
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 32fbb8f4cbea414ca37f6d73aaac6277
+run_name: bittersweet-ray-409
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762515669939
+status: 3
+tags: []
+user_id: theni
