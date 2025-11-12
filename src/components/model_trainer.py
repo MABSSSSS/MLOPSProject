@@ -178,7 +178,7 @@ class ModelTrainer:
                 #  password  9@SNfYYzZPezthw 
             # best model params
             
-            with mlflow.start_run():
+            with mlflow.start_run(run_name=best_model_name):
                 
                 predicted_qualities = best_model.predict(X_test)
                 rmse,mae,r2 = self.eval_metrics(y_test, predicted_qualities)
@@ -192,7 +192,7 @@ class ModelTrainer:
                 
                 if tracking_url_type_score != "file":
                     mlflow.sklearn.log_model(
-                        best_model, artifact_path="model", registered_model_name =  None 
+                        best_model, artifact_path="model", registered_model_name =  best_model_name 
                         
                     )
                     
