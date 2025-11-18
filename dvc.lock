@@ -1,0 +1,46 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python src/components/data_ingestion.py
+    deps:
+    - path: src/components/data_ingestion.py
+      hash: md5
+      md5: ef36c478983b0385bff639e08ed3f29b
+      size: 2803
+    outs:
+    - path: notebook/data/train.csv
+      hash: md5
+      md5: 6b3c31c82dc32ebba78cb9df0ee07d76
+      size: 460726
+  data_transformation:
+    cmd: python src/components/data_transformation.py
+    deps:
+    - path: notebook/data/train.csv
+      hash: md5
+      md5: 6b3c31c82dc32ebba78cb9df0ee07d76
+      size: 460726
+    - path: src/components/data_transformation.py
+      hash: md5
+      md5: 72b5ec165815c0207fc8a3a8879d2cb6
+      size: 5107
+    outs:
+    - path: notebook/data/test.csv
+      hash: md5
+      md5: dcec4b79bf9c7317bd9e17789bf888f0
+      size: 451405
+  model_training:
+    cmd: python src/components/model_trainer.py
+    deps:
+    - path: notebook/data/test.csv
+      hash: md5
+      md5: dcec4b79bf9c7317bd9e17789bf888f0
+      size: 451405
+    - path: src/components/model_trainer.py
+      hash: md5
+      md5: 08b64a03cf946523c27babee1218d749
+      size: 9517
+    outs:
+    - path: best_model.pkl
+      hash: md5
+      md5: d0583de10e0f433aa0b630ed36d9b904
+      size: 135864

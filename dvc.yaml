@@ -21,7 +21,7 @@ stages:
       - src/components/model_trainer.py 
       - notebook/data/test.csv 
     outs:
-      - catboost_model.pkl
-    metrics:
-      - metrics.json
+      - best_model.pkl
+    # metrics:
+    #   - metrics.json
        
