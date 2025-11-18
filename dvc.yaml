@@ -1,0 +1,27 @@
+stages:
+  data_ingestion:
+   cmd: python src/components/data_ingestion.py
+   deps:
+    - src/components/data_ingestion.py
+   outs:
+    - notebook/data/train.csv
+  
+  data_transformation:
+   cmd: python src/components/data_transformation.py
+   deps:
+    - src/components/data_transformation.py 
+    - notebook/data/train.csv
+   outs:
+     - notebook/data/test.csv
+
+
+  model_training:
+    cmd: python src/components/model_trainer.py
+    deps:
+      - src/components/model_trainer.py 
+      - notebook/data/test.csv 
+    outs:
+      - catboost_model.pkl
+    metrics:
+      - metrics.json
+       

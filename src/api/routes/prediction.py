@@ -9,55 +9,87 @@ from src.pipeline.predict_pipeline import PredictPipeline
 from src.api.utils.helper import convert_numpy_types
 from src.api.utils.auth import get_current_user
 
+# -------------------------------
+# Router & Pipeline
+# -------------------------------
 router = APIRouter()
-pipeline = PredictPipeline()
+pipeline = PredictPipeline()  # ML model pipeline instance
 
-# Dependency
+# -------------------------------
+# DB Dependency for FastAPI
+# -------------------------------
 def get_db():
+    """
+    Provide a database session per request and close it after.
+    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+# -------------------------------
+# Root Route
+# -------------------------------
 @router.get("/")
 def root():
     return {"message": "Welcome to House Prediction API"}
 
+# -------------------------------
+# Prediction Route
+# -------------------------------
 @router.post("/predict")
 def predict_house(
-    house: HouseData, 
-    db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
+    house: HouseData,                # Validated input data via Pydantic
+    db: Session = Depends(get_db),   # Database session injected
+    current_user: User = Depends(get_current_user)  # Authenticated user
 ):
     try:
-        # Convert input to DataFrame
+        # -------------------------------
+        # Convert input to DataFrame for ML model
+        # -------------------------------
         data = house.dict()
         df = pd.DataFrame([data])
-        df = df.rename(columns={'FirstFlrSF': '1stFlrSF'})
-        
+        df = df.rename(columns={'FirstFlrSF': '1stFlrSF'})  # match model features
+
+        # -------------------------------
         # Make prediction
+        # -------------------------------
         preds = pipeline.predict(df)
-        predicted_price = float(preds[0])
-        
-        # Prepare record for DB
-        df = df.rename(columns={'1stFlrSF': 'FirstFlrSF'})
+        predicted_price = float(preds[0])  # Convert numpy to native float
+
+        # -------------------------------
+        # Prepare data for DB
+        # -------------------------------
+        df = df.rename(columns={'1stFlrSF': 'FirstFlrSF'})  # match DB column names
         row_data = convert_numpy_types(df.iloc[0].to_dict())
-        
-        # Create prediction record with user relation
+
+        # Create prediction record
         record = HousePrediction(
-            **row_data, 
-            predicted_price=predicted_price, 
-            
+            **row_data,
+            predicted_price=predicted_price,
         )
+
+        # -------------------------------
+        # Save record in DB
+        # -------------------------------
         db.add(record)
         db.commit()
         db.refresh(record)
-        
-        current_user.last_prediction_id = record.id 
+
+        # Link prediction to current user
+        current_user.last_prediction_id = record.id
         db.commit()
-        return {"predicted_price": predicted_price, "user_id": current_user.id,"last_prediction_id":record.id}
-        
-    
+
+        # -------------------------------
+        # Return response
+        # -------------------------------
+        return {
+            "predicted_price": predicted_price,
+            "user_id": current_user.id,
+            "last_prediction_id": record.id
+        }
+
     except Exception as e:
+        # Catch any error and return as HTTP 500
         raise HTTPException(status_code=500, detail=str(e))

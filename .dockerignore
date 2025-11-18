@@ -1,0 +1,36 @@
+# Byte-compiled / cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Git files
+.git
+.gitignore
+
+# Logs and temporary data
+logs/
+*.log
+
+# Notebooks and artifacts
+notebook/
+artifacts/
+mlruns/
+
+# Alembic migration history
+alembic/versions/
+
+# OS or editor files
+.DS_Store
+Thumbs.db
+
+# Environment variables or sensitive files
+.env
+
+# Project build or packaging
+*.egg-info/
