@@ -19,9 +19,6 @@ pipeline = PredictPipeline()  # ML model pipeline instance
 # DB Dependency for FastAPI
 # -------------------------------
 def get_db():
-    """
-    Provide a database session per request and close it after.
-    """
     db = SessionLocal()
     try:
         yield db
@@ -40,23 +37,30 @@ def root():
 # -------------------------------
 @router.post("/predict")
 def predict_house(
-    house: HouseData,                # Validated input data via Pydantic
-    db: Session = Depends(get_db),   # Database session injected
-    current_user: User = Depends(get_current_user)  # Authenticated user
+    house: HouseData,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
-        # -------------------------------
-        # Convert input to DataFrame for ML model
-        # -------------------------------
+        # Convert input to DataFrame
         data = house.dict()
         df = pd.DataFrame([data])
         df = df.rename(columns={'FirstFlrSF': '1stFlrSF'})  # match model features
 
         # -------------------------------
-        # Make prediction
+        # Debug print: Check input before prediction
         # -------------------------------
+        print("Input DataFrame for prediction:", df.to_dict(orient='records'))
+
+        # Make prediction
         preds = pipeline.predict(df)
-        predicted_price = float(preds[0])  # Convert numpy to native float
+
+        # If pipeline returned an error dict, raise HTTPException
+        if isinstance(preds, dict) and "error" in preds:
+            raise HTTPException(status_code=500, detail=f"Prediction pipeline error: {preds['error']}")
+
+        # Convert prediction to float
+        predicted_price = float(preds[0])
 
         # -------------------------------
         # Prepare data for DB
@@ -70,9 +74,7 @@ def predict_house(
             predicted_price=predicted_price,
         )
 
-        # -------------------------------
         # Save record in DB
-        # -------------------------------
         db.add(record)
         db.commit()
         db.refresh(record)
@@ -81,15 +83,19 @@ def predict_house(
         current_user.last_prediction_id = record.id
         db.commit()
 
-        # -------------------------------
         # Return response
-        # -------------------------------
         return {
             "predicted_price": predicted_price,
             "user_id": current_user.id,
             "last_prediction_id": record.id
         }
 
+    except HTTPException:
+        # Re-raise known HTTPExceptions
+        raise
     except Exception as e:
-        # Catch any error and return as HTTP 500
-        raise HTTPException(status_code=500, detail=str(e))
+        # Catch-all with debug info
+        import traceback
+        tb = traceback.format_exc()
+        print("Prediction endpoint error:", tb)
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

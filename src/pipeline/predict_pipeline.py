@@ -32,10 +32,14 @@ class PredictPipeline:
             preprocessor = self.load_object(self.preprocessor_path)
 
             expected_cols = list(preprocessor.feature_names_in_)
+            print("Expected columns:",expected_cols)
+            print("Inout Features before aligning",features.dtypes)
+            
             for col in expected_cols:
                 if col not in features.columns:
                     features[col] = 0
             features = features[expected_cols]
+            print("Features after aligning:", features.dtypes)
             
 
             transformed = preprocessor.transform(features)

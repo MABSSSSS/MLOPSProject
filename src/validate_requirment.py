@@ -103,17 +103,17 @@ if __name__ == "__main__":
     print("📌 RESULTS")
     print("-----------------------------")
 
-    print("\n🟢 Present in requirements.txt:")
+    print("\n Present in requirements.txt:")
     for m in sorted(present):
         print("   •", m)
 
-    print("\n🔵 Built-in Python modules (OK, no need to add):")
+    print("\n Built-in Python modules (OK, no need to add):")
     for b in sorted(builtin):
         print("   •", b)
 
-    print("\n❌ Missing modules (Add these to requirements.txt):")
+    print("\n Missing modules (Add these to requirements.txt):")
     for x in sorted(missing):
         print("   •", x)
 
     if not missing:
-        print("\n🎉 No missing modules! requirements.txt is complete.")
+        print("\n No missing modules! requirements.txt is complete.")
