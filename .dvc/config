@@ -1,5 +1,5 @@
 [core]
-    remote = myremote
+    remote = dagshub
 ['remote "origin"']
     url = https://dagshub.com/happinesswhat31/MLOPSProject.mlflow
     auth = basic
@@ -7,3 +7,7 @@
     password = b0383c9816c9bab1af4b2be93e41e3381939504c
 ['remote "myremote"']
     url = https://dagshub.com/happinesswhat31/MLOPSProject.dvc
+['remote "dagshub"']
+    url = https://dagshub.com/happinesswhat31/MLOPSProject.dvc
+    auth = basic
+    user = happinesswhat31
